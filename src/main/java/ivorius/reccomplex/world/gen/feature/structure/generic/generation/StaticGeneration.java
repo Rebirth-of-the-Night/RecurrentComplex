@@ -18,6 +18,7 @@ import ivorius.reccomplex.gui.table.datasource.TableDataSource;
 import ivorius.reccomplex.json.JsonUtils;
 import ivorius.reccomplex.utils.algebra.ExpressionCache;
 import ivorius.reccomplex.utils.expression.DimensionExpression;
+import ivorius.reccomplex.world.RCChunks;
 import ivorius.reccomplex.world.gen.feature.structure.Placer;
 import ivorius.reccomplex.world.gen.feature.structure.Structure;
 import ivorius.reccomplex.world.gen.feature.structure.StructureRegistry;
@@ -100,7 +101,7 @@ public class StaticGeneration extends GenerationType
             StaticGeneration info = pair.getRight();
             //noinspection ConstantConditions
             return info.hasPattern()
-                    ? Chunks.repeatIntersections(chunkPos, info.getPos(spawnPos), info.pattern.repeatX, info.pattern.repeatZ).map(pos -> Triple.of(pair.getLeft(), info, pos))
+                    ? RCChunks.repeatIntersections(chunkPos, info.getPos(spawnPos), info.pattern.repeatX, info.pattern.repeatZ).map(pos -> Triple.of(pair.getLeft(), info, pos))
                     : Stream.of(Triple.of(pair.getLeft(), info, info.getPos(spawnPos)));
         });
     }
