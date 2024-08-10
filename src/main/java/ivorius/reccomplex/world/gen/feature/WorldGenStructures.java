@@ -167,6 +167,11 @@ public class WorldGenStructures
     public static BlockSurfacePos randomSurfacePos(ChunkPos chunkPos, long seed)
     {
         Random posRandom = new Random(seed ^ POS_SEED);
+        // + 8 because, see this decoration explanation: https://www.reddit.com/r/feedthebeast/comments/5x0twz/investigating_extreme_worldgen_lag/
+        // TL;DR chunks are expected to populate on the +xz edge to avoid accidentally loading neighboring chunks.
+        // To facilitate this, chunks are only populated when its +x, +z, and +x+z neighbors are already provided.
+        // So when we populate, we generate in this 'safe radius' and should have +- 8 blocks to play with before
+        // triggering a new chunk to populate.
         return BlockSurfacePos.from(chunkPos.getBlock(
                 posRandom.nextInt(16) + 8,
                 0,
