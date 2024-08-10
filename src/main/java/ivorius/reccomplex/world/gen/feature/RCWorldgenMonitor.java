@@ -27,8 +27,8 @@ public class RCWorldgenMonitor
     public static void create()
     {
         WorldgenMonitor.create("Recurrent Complex", (p, d) -> {
-            if (actions.size() > 0)
-                RecurrentComplex.logger.warn("Cascading chunk generation happening while " + actions.peek());
+            if (!actions.isEmpty())
+                RecurrentComplex.logger.warn("Cascading chunk generation happening while {}", actions.peek());
         });
     }
 }

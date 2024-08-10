@@ -28,7 +28,7 @@ public class WorldgenMonitor extends AbstractAppender
         super(modName + "_worldgen_monitor", null, SyslogLayout.newBuilder().build());
         this.modName = modName;
         this.consumer = consumer;
-        regex = Pattern.compile(modName + " loaded a new chunk \\(([^,]*), ([^,]*)  Dimension: ([^)]*)\\)");
+        regex = Pattern.compile(modName + " loaded a new chunk \\[([-\\d]+), ([-\\d]+)\\] in dimension ([-\\d]+)");
     }
 
     public static void create(String modName, BiConsumer<ChunkPos, Integer> consumer)
@@ -42,6 +42,7 @@ public class WorldgenMonitor extends AbstractAppender
     public void append(LogEvent event)
     {
         String message = event.getMessage().getFormattedMessage();
+
         Matcher matcher = regex.matcher(message);
         if (matcher.find())
         {
