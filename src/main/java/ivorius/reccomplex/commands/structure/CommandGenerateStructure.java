@@ -89,7 +89,7 @@ public class CommandGenerateStructure extends SimpleCommand
 
         StructureGenerator<?> generator = new StructureGenerator<>(structure).world(world).generationInfo(generationType)
                 .seed(RCStrings.seed(seed))
-                .structureID(structureID).randomPosition(pos, placer).fromCenter(true)
+                .structureID(structureID).fromCenter(true)
                 .maturity(suggest ? SUGGEST : FIRST)
                 .transform(transform);
 
@@ -97,6 +97,9 @@ public class CommandGenerateStructure extends SimpleCommand
             Double yPosition = parameters.get("y").map(y -> CommandBase.parseDouble(sender.getPosition().getY(), y, -30000000, 30000000, false)).get();
 
             generator.lowerCoord(pos.blockPos(MathHelper.floor(yPosition)));
+        }
+        else {
+            generator.randomPosition(pos, placer);
         }
 
         if (structure instanceof GenericStructure && world == sender.getEntityWorld())
