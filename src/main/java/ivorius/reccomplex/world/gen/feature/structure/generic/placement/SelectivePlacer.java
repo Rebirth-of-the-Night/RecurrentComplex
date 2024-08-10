@@ -10,6 +10,7 @@ import com.google.gson.reflect.TypeToken;
 import ivorius.ivtoolkit.blocks.BlockAreas;
 import ivorius.ivtoolkit.blocks.BlockSurfacePos;
 import ivorius.ivtoolkit.blocks.IvBlockCollection;
+import ivorius.reccomplex.RCConfig;
 import ivorius.reccomplex.RecurrentComplex;
 import ivorius.reccomplex.json.JsonUtils;
 import ivorius.reccomplex.utils.algebra.ExpressionCache;
@@ -23,6 +24,7 @@ import ivorius.reccomplex.world.gen.feature.structure.generic.placement.rays.Ray
 import ivorius.reccomplex.world.gen.feature.structure.generic.presets.GenericPlacerPresets;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
 
 import javax.annotation.Nonnull;
 import java.lang.reflect.Type;
@@ -85,10 +87,27 @@ public class SelectivePlacer implements Placer
     @Override
     public int place(StructurePlaceContext context, IvBlockCollection blockCollection)
     {
+        // The baseline will move the structure up and down.
+        // We also use the baseline to determine where to place our structure.
+        // Rarely, if configured this way, the baseline may be too high or low (negative) to be within the structure.
+        // In this case, just fuck it and use the minimum / maximum part of the structure. Won't get much better.
+        int safeBaseline = MathHelper.clamp(baseline, 0, blockCollection.height - 1);
+
         Set<BlockPos> surface = BlockAreas.side(blockCollection.area(), EnumFacing.DOWN).stream()
-                .map(p -> BlockSurfacePos.from(p).blockPos(baseline))
-                .filter(p -> sourceMatcher.evaluate(blockCollection.getBlockState(p))).collect(Collectors.toSet());
-        return placer.getContents().place(context, blockCollection, surface);
+                .map(p -> BlockSurfacePos.from(p).blockPos(safeBaseline))
+                .filter(p -> sourceMatcher.evaluate(blockCollection.getBlockState(p)))
+                .filter(p -> !RCConfig.avoidPlacerChunkGeneration || context.environment.world.isChunkGeneratedAt(p.getX() >> 4, p.getZ() >> 4))
+                .collect(Collectors.toSet());
+
+        // If possible, use just the surface within loaded chunks.
+        // If not, just use the normal surface. It may cause chained chunk gen even if avoidPlacerChunkGeneration is set,
+        // but it's better than to try placing the structure on a part that isn't deemed to be a proper 'surface' in the
+        // first place.
+        Set<BlockPos> safeSurface = surface.stream()
+            .filter(p -> !RCConfig.avoidPlacerChunkGeneration || context.environment.world.isChunkGeneratedAt(p.getX() >> 4, p.getZ() >> 4))
+            .collect(Collectors.toSet());
+
+        return placer.getContents().place(context, blockCollection, safeSurface.isEmpty() ? surface : safeSurface);
     }
 
     public static class Serializer implements JsonSerializer<SelectivePlacer>, JsonDeserializer<SelectivePlacer>
