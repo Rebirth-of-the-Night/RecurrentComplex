@@ -128,7 +128,18 @@ public class StructureGenerator<S extends NBTStorable>
     @Nonnull
     public GenerationResult generate()
     {
-        Optional<S> optionalInstanceData = instanceData();
+        Optional<S> optionalInstanceData;
+
+        RCWorldgenMonitor.start("preparing " + structureID());
+        try {
+            optionalInstanceData = instanceData();
+        }
+        catch (Exception e) {
+            return failGenerate(new GenerationResult.Failure.Exception(e));
+        }
+        finally {
+            RCWorldgenMonitor.stop();
+        }
 
         if (!optionalInstanceData.isPresent())
             return failGenerate(GenerationResult.Failure.placement);
@@ -237,12 +248,20 @@ public class StructureGenerator<S extends NBTStorable>
         if (RCConfig.logFailingStructure(structure)) {
             Optional<Integer> dim = Optional.ofNullable(world).map(w -> w.provider.getDimension());
 
-            RecurrentComplex.logger.trace(String.format("%s canceled generation at %s (%s): %s",
-                    structure, lowerCoord().orElse(null), dim.map(String::valueOf).orElse("Unknown"), failure));
+            RecurrentComplex.logger.trace(
+                String.format("Structure '%s' canceled generation at %s (%s): %s",
+                structure,
+                Optional.ofNullable(lowerCoord).map(BlockPos::toString)
+                        .orElse(Optional.ofNullable(surfacePos).map(BlockSurfacePos::toString)
+                        .orElse("unknown pos")),
+                dim.map(String::valueOf).orElse("Unknown"), failure)
+            );
 
             if (failure instanceof GenerationResult.Failure.Exception) {
-                RecurrentComplex.logger.error("Error on structure generation",
-                        ((GenerationResult.Failure.Exception) failure).exception);
+                RecurrentComplex.logger.error(
+                    String.format("Error on structure generation of '%s'.", structure),
+                    ((GenerationResult.Failure.Exception) failure).exception
+                );
             }
         }
 
@@ -420,10 +439,11 @@ public class StructureGenerator<S extends NBTStorable>
             }
             else
                 throw new IllegalStateException("No place!");
+
+            if (placed)
+                this.boundingBox = boundingBox;
         }
 
-        if (placed)
-            this.boundingBox = boundingBox;
 
         return Optional.of(boundingBox);
     }
@@ -522,18 +542,18 @@ public class StructureGenerator<S extends NBTStorable>
                 : this.instanceDataNBT != null ? load().map(load -> structure().loadInstanceData(load, this.instanceDataNBT, foreignTransformer()))
                 : prepare().flatMap(prepare ->
         {
+            RCWorldgenMonitor.start("preparing " + structureID());
             try {
-                RCWorldgenMonitor.start("preparing " + structureID());
-                Optional<S> prepared = Optional.ofNullable(structure().prepareInstanceData(prepare, foreignTransformer()));
-                RCWorldgenMonitor.stop();
-
-                return prepared;
+                return Optional.ofNullable(structure().prepareInstanceData(prepare, foreignTransformer()));
             }
             catch (Exception e) {
                 if (e instanceof ExpectedException && ((ExpectedException) e).isExpected())
                     RecurrentComplex.logger.error(String.format("Error preparing structure: %s, Cause: %s", structure(), e.getMessage()));
                 else
                     RecurrentComplex.logger.error("Error preparing structure: " + structure(), e);
+            }
+            finally {
+                RCWorldgenMonitor.stop();
             }
 
             return Optional.empty();
