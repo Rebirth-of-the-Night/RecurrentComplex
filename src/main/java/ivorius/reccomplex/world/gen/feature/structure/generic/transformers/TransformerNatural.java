@@ -34,7 +34,9 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 
 import javax.annotation.Nullable;
 import java.lang.reflect.Type;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by lukas on 25.05.14.
@@ -49,6 +51,8 @@ public class TransformerNatural extends TransformerAbstractCloud<TransformerNatu
 
     public double naturalExpansionDistance;
     public double naturalExpansionRandomization;
+
+    private final Set<BlockPos> visitedPositions = new HashSet<>();
 
     public TransformerNatural()
     {
@@ -88,7 +92,16 @@ public class TransformerNatural extends TransformerAbstractCloud<TransformerNatu
     @Override
     public boolean canPenetrate(Environment environment, IvWorldData worldData, BlockPos pos, double density, TransformerMulti transformer, TransformerMulti.InstanceData transformerID)
     {
-        return density >= 1 || destMatcher.evaluate(() -> PositionedBlockExpression.Argument.at(environment.world, pos));
+        if (density >= 1)
+            return true;
+        if (visitedPositions.contains(pos))
+            return false;
+        try {
+            visitedPositions.add(pos);
+            return destMatcher.evaluate(() -> PositionedBlockExpression.Argument.at(environment.world, pos));
+        } finally {
+            visitedPositions.remove(pos);
+        }
     }
 
     @Override
