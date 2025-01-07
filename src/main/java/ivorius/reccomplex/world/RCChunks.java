@@ -4,6 +4,7 @@ import ivorius.ivtoolkit.blocks.BlockSurfacePos;
 import ivorius.ivtoolkit.util.IvStreams;
 import net.minecraft.util.math.ChunkPos;
 
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -21,11 +22,10 @@ public class RCChunks {
     }
 
     public static Stream<BlockSurfacePos> repeatIntersections(ChunkPos chunkPos, BlockSurfacePos pos, int repeatX, int repeatZ) {
-        IntStream xStream = repeatsInChunk(chunkPos.x, pos.x, repeatX);
-        IntStream zStream = repeatsInChunk(chunkPos.z, pos.z, repeatZ);
+        Supplier<IntStream> xStreamSupplier = () -> RCChunks.repeatsInChunk(chunkPos.x, pos.x, repeatX);
+        Supplier<IntStream> zStreamSupplier = () -> RCChunks.repeatsInChunk(chunkPos.z, pos.z, repeatZ);
 
-        return IvStreams.flatMapToObj(xStream, x ->
-            zStream.mapToObj(z -> new BlockSurfacePos(x, z))
-        );
+        return xStreamSupplier.get().boxed().flatMap(x ->
+            zStreamSupplier.get().boxed().map(z -> new BlockSurfacePos(x, z)));
     }
 }
